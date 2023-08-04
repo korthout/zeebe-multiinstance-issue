@@ -9,6 +9,7 @@ import (
 	"github.com/camunda/zeebe/clients/go/v8/pkg/entities"
 	"github.com/camunda/zeebe/clients/go/v8/pkg/worker"
 	"github.com/camunda/zeebe/clients/go/v8/pkg/zbc"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -92,6 +93,7 @@ func zeebeClient() zbc.Client {
 	client, err := zbc.NewClient(&zbc.ClientConfig{
 		GatewayAddress:         gatewayAddress,
 		UsePlaintextConnection: true,
+		DialOpts:               []grpc.DialOption{grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(8 * 1024 * 1024))},
 	})
 	must(err)
 
