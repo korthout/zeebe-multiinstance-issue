@@ -22,9 +22,10 @@ const (
 func main() {
 	client := zeebeClient()
 
-	client.NewJobWorker().JobType("first_data_loader").Handler(firstDataLoader).Open()
-	client.NewJobWorker().JobType("second_data_processor").Handler(secondParallelMultiInstance).Open()
-	client.NewJobWorker().JobType("third_data_printer").Handler(thirdDataPrinter).Open()
+	client.NewJobWorker().JobType("first_data_loader").Handler(firstDataLoader).Name("First").Open()
+	client.NewJobWorker().JobType("second_data_processor").Handler(secondParallelMultiInstance).Name("Second").Open() //.FetchVariables("inputElement")
+
+	client.NewJobWorker().JobType("third_data_printer").Handler(thirdDataPrinter).Name("Third").Open()
 
 	resp, err := client.NewCreateInstanceCommand().BPMNProcessId("my_process").LatestVersion().Send(context.Background())
 	must(err)
@@ -76,8 +77,17 @@ func generateData() dataWrapper {
 func secondParallelMultiInstance(client worker.JobClient, job entities.Job) {
 	log.Println("second job handler called")
 
-	_, err := client.NewCompleteJobCommand().JobKey(job.GetKey()).Send(context.Background())
+	variableMaps := make(map[string]interface{})
+	variableMaps["outputElement"] = strconv.FormatInt(job.GetKey(), 10)
+
+	command, err := client.NewCompleteJobCommand().JobKey(job.GetKey()).VariablesFromMap(variableMaps)
 	must(err)
+	response, err := command.Send(context.Background())
+	must(err)
+	if response == nil {
+		panic("Failed to receive response")
+	}
+
 }
 
 func thirdDataPrinter(client worker.JobClient, job entities.Job) {
